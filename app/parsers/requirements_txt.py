@@ -21,4 +21,10 @@ def parse_requirements_txt(project_path: str) -> list[dict]:
 
         dependencies.append({"name": name.strip(), "version": version})
 
-    return dependencies
+    deduplicated = {}
+    for dep in dependencies:
+        name = dep["name"]
+        if name not in deduplicated or deduplicated[name]["version"] is None:
+            deduplicated[name] = dep
+
+    return list(deduplicated.values())
