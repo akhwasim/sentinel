@@ -5,6 +5,7 @@ from models import Component
 from purl import build_purl
 from project import ScanResult
 from pathlib import Path
+from sbom import generate_sbom
 
 app = typer.Typer()
 
@@ -40,6 +41,11 @@ def scan(path: str = typer.Argument(".")):
         print(f"Found {len(scan_result.components)} dependencies")
         print(f"Analysis quality: {scan_result.analysis_quality}")
         print(f"Scanned at: {scan_result.scanned_at}")
+
+        sbom_json = generate_sbom(scan_result)
+        output_path = Path("output") / "sbom.cdx.json"
+        output_path.write_text(sbom_json)
+        print(f"SBOM written to: {output_path}")
 
 
 if __name__ == "__main__":
