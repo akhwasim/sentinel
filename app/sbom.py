@@ -3,6 +3,8 @@ from cyclonedx.model.component import Component as CycloneComponent, ComponentTy
 from cyclonedx.output.json import JsonV1Dot5
 from project import ScanResult
 from packageurl import PackageURL
+from cyclonedx.model.license import DisjunctiveLicense, LicenseExpression
+
 
 def generate_sbom(scan_result: ScanResult) -> str:
     """Build a CycloneDX SBOM (as a JSON string) from our ScanResult."""
@@ -15,6 +17,11 @@ def generate_sbom(scan_result: ScanResult) -> str:
             type=ComponentType.LIBRARY,
             purl=PackageURL.from_string(comp.purl),
         )
+
+        if comp.license and comp.license.get("id"):
+            license_id = comp.license["id"]
+            cyclone_comp.licenses.add(LicenseExpression(license_id))
+
         bom.components.add(cyclone_comp)
 
     output = JsonV1Dot5(bom)

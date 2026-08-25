@@ -6,6 +6,7 @@ from purl import build_purl
 from project import ScanResult
 from pathlib import Path
 from sbom import generate_sbom
+from license_lookup import get_license
 
 app = typer.Typer()
 
@@ -20,13 +21,16 @@ def scan(path: str = typer.Argument(".")):
     if ecosystem == "python":
         raw_dependencies = parse_requirements_txt(path)
         components = []
-        for dep in raw_dependencies:
+        total = len(raw_dependencies)
+        for index, dep in enumerate(raw_dependencies, start=1):
+            print(f"Checking license {index}/{total}: {dep['name']}")
             component = Component(
                 name=dep["name"],
                 version=dep["version"],
                 ecosystem=ecosystem,
                 type="direct",
                 purl=build_purl(ecosystem, dep["name"], dep["version"]),
+                license=get_license(dep["name"], dep["version"]),
             )
             components.append(component)
 

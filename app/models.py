@@ -8,3 +8,4 @@ class Component:
     ecosystem: str
     type: str
     purl: str
+    license: dict | None = None
