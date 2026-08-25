@@ -20,7 +20,7 @@ def scan(path: str = typer.Argument(".")):
     print(f"Detected ecosystem: {ecosystem}")
 
     if ecosystem == "python":
-        raw_dependencies = parse_requirements_txt(path)
+        raw_dependencies, warnings = parse_requirements_txt(path)
         components = []
         total = len(raw_dependencies)
         for index, dep in enumerate(raw_dependencies, start=1):
@@ -42,11 +42,17 @@ def scan(path: str = typer.Argument(".")):
             analysis_quality="DEGRADED",
             resolution_method="requirements.txt",
             components=components,
+            warnings=warnings,
         )
 
         print(f"Found {len(scan_result.components)} dependencies")
         print(f"Analysis quality: {scan_result.analysis_quality}")
         print(f"Scanned at: {scan_result.scanned_at}")
+
+        if scan_result.warnings:
+            print(f"\nWarnings ({len(scan_result.warnings)}):")
+            for warning in scan_result.warnings:
+                print(f"  ⚠ {warning}")
 
         sbom_json = generate_sbom(scan_result)
         output_path = Path("output") / "sbom.cdx.json"

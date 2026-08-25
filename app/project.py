@@ -11,3 +11,4 @@ class ScanResult:
     resolution_method: str
     scanned_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     components: list[Component] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)

@@ -22,9 +22,19 @@ def parse_requirements_txt(project_path: str) -> list[dict]:
         dependencies.append({"name": name.strip(), "version": version})
 
     deduplicated = {}
+    warnings = []
+
     for dep in dependencies:
         name = dep["name"]
+        existing = deduplicated.get(name)
+
+        if existing and existing["version"] and dep["version"] and existing["version"] != dep["version"]:
+            warnings.append(
+                f"{name} pinned to conflicting versions: {existing['version']} and {dep['version']} "
+                f"(using {existing['version']})"
+            )
+
         if name not in deduplicated or deduplicated[name]["version"] is None:
             deduplicated[name] = dep
 
-    return list(deduplicated.values())
+    return list(deduplicated.values()), warnings
