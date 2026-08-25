@@ -32,6 +32,12 @@ def generate_sbom(scan_result: ScanResult) -> str:
                 description=vuln.get("summary") or "",
             )
             cyclone_vuln.affects.add(cyclone_comp.bom_ref)
+
+            severity_label = vuln.get("severity")
+            if severity_label and severity_label != "UNKNOWN":
+                rating = VulnerabilityRating(severity=VulnerabilitySeverity[severity_label])
+                cyclone_vuln.ratings.add(rating)
+
             bom.vulnerabilities.add(cyclone_vuln)
 
     output = JsonV1Dot5(bom)
