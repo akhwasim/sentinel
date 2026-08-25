@@ -4,6 +4,8 @@ from cyclonedx.output.json import JsonV1Dot5
 from project import ScanResult
 from packageurl import PackageURL
 from cyclonedx.model.license import DisjunctiveLicense, LicenseExpression
+from cyclonedx.model.vulnerability import Vulnerability, VulnerabilityRating, VulnerabilitySeverity
+from cyclonedx.model.bom_ref import BomRef
 
 
 def generate_sbom(scan_result: ScanResult) -> str:
@@ -23,6 +25,14 @@ def generate_sbom(scan_result: ScanResult) -> str:
             cyclone_comp.licenses.add(LicenseExpression(license_id))
 
         bom.components.add(cyclone_comp)
+
+        for vuln in comp.vulnerabilities:
+            cyclone_vuln = Vulnerability(
+                id=vuln.get("id"),
+                description=vuln.get("summary") or "",
+            )
+            cyclone_vuln.affects.add(cyclone_comp.bom_ref)
+            bom.vulnerabilities.add(cyclone_vuln)
 
     output = JsonV1Dot5(bom)
     return output.output_as_string(indent=2)

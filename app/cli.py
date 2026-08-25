@@ -7,6 +7,7 @@ from project import ScanResult
 from pathlib import Path
 from sbom import generate_sbom
 from license_lookup import get_license
+from vuln_lookup import get_vulnerabilities
 
 app = typer.Typer()
 
@@ -23,7 +24,7 @@ def scan(path: str = typer.Argument(".")):
         components = []
         total = len(raw_dependencies)
         for index, dep in enumerate(raw_dependencies, start=1):
-            print(f"Checking license {index}/{total}: {dep['name']}")
+            print(f"Checking {index}/{total}: {dep['name']}")
             component = Component(
                 name=dep["name"],
                 version=dep["version"],
@@ -31,6 +32,7 @@ def scan(path: str = typer.Argument(".")):
                 type="direct",
                 purl=build_purl(ecosystem, dep["name"], dep["version"]),
                 license=get_license(dep["name"], dep["version"]),
+                vulnerabilities=get_vulnerabilities(dep["name"], dep["version"], ecosystem),
             )
             components.append(component)
 
