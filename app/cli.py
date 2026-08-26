@@ -9,6 +9,7 @@ from sbom import generate_sbom
 from license_lookup import get_license
 from vuln_lookup import get_vulnerabilities
 from score import calculate_score
+from explain import explain_findings
 
 app = typer.Typer()
 
@@ -68,6 +69,41 @@ def scan(path: str = typer.Argument(".")):
         output_path.write_text(sbom_json)
         print(f"SBOM written to: {output_path}")
 
+@app.command()
+def explain(path: str = typer.Argument(".")):
+    """Explain the scan findings in plain English using AI."""
+    ecosystem = detect_ecosystem(path)
+
+    if ecosystem != "python":
+        print("Currently only Python projects are supported.")
+        return
+
+    raw_dependencies, warnings = parse_requirements_txt(path)
+    components = []
+    for dep in raw_dependencies:
+        component = Component(
+            name=dep["name"],
+            version=dep["version"],
+            ecosystem=ecosystem,
+            type="direct",
+            purl=build_purl(ecosystem, dep["name"], dep["version"]),
+            license=get_license(dep["name"], dep["version"]),
+            vulnerabilities=get_vulnerabilities(dep["name"], dep["version"], ecosystem),
+        )
+        components.append(component)
+
+    scan_result = ScanResult(
+        project_name=Path(path).name,
+        ecosystem=ecosystem,
+        analysis_quality="DEGRADED",
+        resolution_method="requirements.txt",
+        components=components,
+        warnings=warnings,
+    )
+
+    print("Analyzing findings with AI...\n")
+    explanation = explain_findings(scan_result)
+    print(explanation)
 
 if __name__ == "__main__":
     app()
