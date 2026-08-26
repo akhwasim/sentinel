@@ -2,3 +2,4 @@ venv/
 test-projects/
 __pycache__/
 output/
+.env
