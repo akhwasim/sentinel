@@ -54,14 +54,14 @@ def scan(path: str = typer.Argument(".")):
             print(f"\nWarnings ({len(scan_result.warnings)}):")
             for warning in scan_result.warnings:
                 print(f"  ⚠ {warning}")
-        
-                summary = calculate_score(scan_result)
-                print(f"\nSupply Chain Score: {summary['score']}/100")
-                print(f"  Critical vulnerabilities: {summary['critical_vulnerabilities']}")
-                print(f"  High vulnerabilities: {summary['high_vulnerabilities']}")
-                print(f"  Medium vulnerabilities: {summary['medium_vulnerabilities']}")
-                print(f"  Low vulnerabilities: {summary['low_vulnerabilities']}")
-                print(f"  Undeclared licenses: {summary['undeclared_licenses']}")
+
+        summary = calculate_score(scan_result)
+        print(f"\nSupply Chain Score: {summary['score']}/100")
+        print(f"  Critical vulnerabilities: {summary['critical_vulnerabilities']}")
+        print(f"  High vulnerabilities: {summary['high_vulnerabilities']}")
+        print(f"  Medium vulnerabilities: {summary['medium_vulnerabilities']}")
+        print(f"  Low vulnerabilities: {summary['low_vulnerabilities']}")
+        print(f"  Undeclared licenses: {summary['undeclared_licenses']}")
 
         sbom_json = generate_sbom(scan_result)
         output_path = Path("output") / "sbom.cdx.json"
