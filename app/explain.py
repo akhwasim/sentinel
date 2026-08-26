@@ -12,6 +12,19 @@ Keep it concise: 3-4 short paragraphs maximum."""
 
 def explain_findings(scan_result: ScanResult) -> str:
     """Generate a plain-English explanation of the scan findings."""
+    findings_text = build_findings_text(scan_result)
+    return ask_ai(SYSTEM_PROMPT, findings_text)
+
+
+ASK_SYSTEM_PROMPT = """You are a security assistant for a software supply chain tool called Sentinel.
+You will be given real scan findings (score, vulnerabilities, warnings, license data) and a question from the user.
+Answer ONLY using the data given to you. Do not invent vulnerabilities, packages, or facts not present in the data.
+If the question cannot be answered from the given data, say so honestly.
+Keep answers concise and direct."""
+
+
+def build_findings_text(scan_result: ScanResult) -> str:
+    """Build the plain-text findings block (shared by explain and ask)."""
     summary = calculate_score(scan_result)
 
     vuln_lines = []
@@ -22,7 +35,7 @@ def explain_findings(scan_result: ScanResult) -> str:
                 f"(severity: {vuln.get('severity')}) - {vuln.get('summary')}"
             )
 
-    findings_text = f"""
+    return f"""
 Project: {scan_result.project_name}
 Analysis quality: {scan_result.analysis_quality}
 Score: {summary['score']}/100
@@ -36,4 +49,9 @@ Warnings:
 Undeclared licenses: {summary['undeclared_licenses']}
 """
 
-    return ask_ai(SYSTEM_PROMPT, findings_text)
+
+def ask_about_findings(scan_result: ScanResult, question: str) -> str:
+    """Answer a user's question grounded in the real scan findings."""
+    findings_text = build_findings_text(scan_result)
+    full_prompt = f"{findings_text}\n\nQuestion: {question}"
+    return ask_ai(ASK_SYSTEM_PROMPT, full_prompt)

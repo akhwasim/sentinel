@@ -1,15 +1,10 @@
 import typer
-from detector import detect_ecosystem
-from parsers.requirements_txt import parse_requirements_txt
-from models import Component
-from purl import build_purl
-from project import ScanResult
 from pathlib import Path
 from sbom import generate_sbom
-from license_lookup import get_license
-from vuln_lookup import get_vulnerabilities
 from score import calculate_score
 from explain import explain_findings
+from explain import ask_about_findings
+from scanner import run_scan
 
 app = typer.Typer()
 
@@ -18,92 +13,55 @@ app = typer.Typer()
 def scan(path: str = typer.Argument(".")):
     """Scan a project and generate an SBOM."""
     print(f"Scanning: {path}")
-    ecosystem = detect_ecosystem(path)
-    print(f"Detected ecosystem: {ecosystem}")
 
-    if ecosystem == "python":
-        raw_dependencies, warnings = parse_requirements_txt(path)
-        components = []
-        total = len(raw_dependencies)
-        for index, dep in enumerate(raw_dependencies, start=1):
-            print(f"Checking {index}/{total}: {dep['name']}")
-            component = Component(
-                name=dep["name"],
-                version=dep["version"],
-                ecosystem=ecosystem,
-                type="direct",
-                purl=build_purl(ecosystem, dep["name"], dep["version"]),
-                license=get_license(dep["name"], dep["version"]),
-                vulnerabilities=get_vulnerabilities(dep["name"], dep["version"], ecosystem),
-            )
-            components.append(component)
+    scan_result = run_scan(path)
+    if scan_result is None:
+        return
 
-        scan_result = ScanResult(
-            project_name=Path(path).name,
-            ecosystem=ecosystem,
-            analysis_quality="DEGRADED",
-            resolution_method="requirements.txt",
-            components=components,
-            warnings=warnings,
-        )
+    print(f"Found {len(scan_result.components)} dependencies")
+    print(f"Analysis quality: {scan_result.analysis_quality}")
+    print(f"Scanned at: {scan_result.scanned_at}")
 
-        print(f"Found {len(scan_result.components)} dependencies")
-        print(f"Analysis quality: {scan_result.analysis_quality}")
-        print(f"Scanned at: {scan_result.scanned_at}")
+    if scan_result.warnings:
+        print(f"\nWarnings ({len(scan_result.warnings)}):")
+        for warning in scan_result.warnings:
+            print(f"  ⚠ {warning}")
 
-        if scan_result.warnings:
-            print(f"\nWarnings ({len(scan_result.warnings)}):")
-            for warning in scan_result.warnings:
-                print(f"  ⚠ {warning}")
+    summary = calculate_score(scan_result)
+    print(f"\nSupply Chain Score: {summary['score']}/100")
+    print(f"  Critical vulnerabilities: {summary['critical_vulnerabilities']}")
+    print(f"  High vulnerabilities: {summary['high_vulnerabilities']}")
+    print(f"  Medium vulnerabilities: {summary['medium_vulnerabilities']}")
+    print(f"  Low vulnerabilities: {summary['low_vulnerabilities']}")
+    print(f"  Undeclared licenses: {summary['undeclared_licenses']}")
 
-        summary = calculate_score(scan_result)
-        print(f"\nSupply Chain Score: {summary['score']}/100")
-        print(f"  Critical vulnerabilities: {summary['critical_vulnerabilities']}")
-        print(f"  High vulnerabilities: {summary['high_vulnerabilities']}")
-        print(f"  Medium vulnerabilities: {summary['medium_vulnerabilities']}")
-        print(f"  Low vulnerabilities: {summary['low_vulnerabilities']}")
-        print(f"  Undeclared licenses: {summary['undeclared_licenses']}")
-
-        sbom_json = generate_sbom(scan_result)
-        output_path = Path("output") / "sbom.cdx.json"
-        output_path.write_text(sbom_json)
-        print(f"SBOM written to: {output_path}")
+    sbom_json = generate_sbom(scan_result)
+    output_path = Path("output") / "sbom.cdx.json"
+    output_path.write_text(sbom_json)
+    print(f"SBOM written to: {output_path}")
 
 @app.command()
 def explain(path: str = typer.Argument(".")):
     """Explain the scan findings in plain English using AI."""
-    ecosystem = detect_ecosystem(path)
-
-    if ecosystem != "python":
-        print("Currently only Python projects are supported.")
+    scan_result = run_scan(path)
+    if scan_result is None:
         return
 
-    raw_dependencies, warnings = parse_requirements_txt(path)
-    components = []
-    for dep in raw_dependencies:
-        component = Component(
-            name=dep["name"],
-            version=dep["version"],
-            ecosystem=ecosystem,
-            type="direct",
-            purl=build_purl(ecosystem, dep["name"], dep["version"]),
-            license=get_license(dep["name"], dep["version"]),
-            vulnerabilities=get_vulnerabilities(dep["name"], dep["version"], ecosystem),
-        )
-        components.append(component)
-
-    scan_result = ScanResult(
-        project_name=Path(path).name,
-        ecosystem=ecosystem,
-        analysis_quality="DEGRADED",
-        resolution_method="requirements.txt",
-        components=components,
-        warnings=warnings,
-    )
-
-    print("Analyzing findings with AI...\n")
+    print("\nAnalyzing findings with AI...\n")
     explanation = explain_findings(scan_result)
     print(explanation)
+
+@app.command()
+def ask(question: str, path: str = typer.Option(".", "--path")):
+    """Ask a question about the scan findings."""
+    scan_result = run_scan(path)
+    if scan_result is None:
+        return
+
+    print("\nThinking...\n")
+    answer = ask_about_findings(scan_result, question)
+    print(answer)
+
 
 if __name__ == "__main__":
     app()
