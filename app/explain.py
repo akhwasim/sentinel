@@ -35,10 +35,22 @@ def build_findings_text(scan_result: ScanResult) -> str:
                 f"(severity: {vuln.get('severity')}) - {vuln.get('summary')}"
             )
 
+    direct_deps = [c.name for c in scan_result.components if c.type == "direct"]
+
+    transitive_lines = []
+    for comp in scan_result.components:
+        if comp.type == "transitive":
+            transitive_lines.append(f"- {comp.name} (introduced by: {comp.introduced_by})")
+
     return f"""
 Project: {scan_result.project_name}
 Analysis quality: {scan_result.analysis_quality}
 Score: {summary['score']}/100
+
+Direct dependencies: {', '.join(direct_deps) if direct_deps else "None (analysis was degraded, direct/transitive not distinguished)"}
+
+Transitive dependencies and what introduced them:
+{chr(10).join(transitive_lines) if transitive_lines else "None (not available for this analysis quality)"}
 
 Vulnerabilities found:
 {chr(10).join(vuln_lines) if vuln_lines else "None"}

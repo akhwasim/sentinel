@@ -12,3 +12,16 @@ def detect_ecosystem(project_path: str) -> str | None:
         return "node"
 
     return None
+
+
+def detect_python_resolution_method(project_path: str) -> str:
+    """Figure out which file to use for resolving Python dependencies."""
+    path = Path(project_path)
+
+    if (path / "poetry.lock").exists():
+        return "poetry.lock"
+
+    if (path / "requirements.txt").exists():
+        return "requirements.txt"
+
+    return "unknown"

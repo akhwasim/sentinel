@@ -11,6 +11,7 @@ from cyclonedx.model.bom_ref import BomRef
 def generate_sbom(scan_result: ScanResult) -> str:
     """Build a CycloneDX SBOM (as a JSON string) from our ScanResult."""
     bom = Bom()
+    name_to_cyclone_comp = {}
 
     for comp in scan_result.components:
         cyclone_comp = CycloneComponent(
@@ -25,6 +26,7 @@ def generate_sbom(scan_result: ScanResult) -> str:
             cyclone_comp.licenses.add(LicenseExpression(license_id))
 
         bom.components.add(cyclone_comp)
+        name_to_cyclone_comp[normalize(comp.name)] = cyclone_comp
 
         for vuln in comp.vulnerabilities:
             cyclone_vuln = Vulnerability(
@@ -40,5 +42,16 @@ def generate_sbom(scan_result: ScanResult) -> str:
 
             bom.vulnerabilities.add(cyclone_vuln)
 
+    for comp in scan_result.components:
+        if comp.introduced_by:
+            parent = name_to_cyclone_comp.get(normalize(comp.introduced_by))
+            child = name_to_cyclone_comp.get(normalize(comp.name))
+            if parent and child:
+                bom.register_dependency(parent, [child])
+
     output = JsonV1Dot5(bom)
     return output.output_as_string(indent=2)
+
+
+def normalize(name: str) -> str:
+    return name.lower().replace("_", "-")
