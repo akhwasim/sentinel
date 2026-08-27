@@ -9,10 +9,20 @@ from purl import build_purl
 from license_lookup import get_license
 from vuln_lookup import get_vulnerabilities
 from project import ScanResult
+from github_ingest import is_github_url, clone_repo, cleanup_repo, extract_repo_name
 
 
 def run_scan(path: str, show_progress: bool = True) -> ScanResult | None:
     """Detect ecosystem, parse dependencies, enrich with license/vuln data, return a ScanResult."""
+    project_name_override = None
+    cloned_dir = None
+
+    if is_github_url(path):
+        print(f"Cloning {path}...")
+        project_name_override = extract_repo_name(path)
+        cloned_dir = clone_repo(path)
+        path = cloned_dir
+
     ecosystem = detect_ecosystem(path)
 
     if ecosystem != "python":
@@ -34,14 +44,19 @@ def run_scan(path: str, show_progress: bool = True) -> ScanResult | None:
 
     components = enrich_components(raw_items, ecosystem, show_progress)
 
-    return ScanResult(
-        project_name=Path(path).name,
+    result = ScanResult(
+        project_name=project_name_override or Path(path).name,
         ecosystem=ecosystem,
         analysis_quality=analysis_quality,
         resolution_method=resolution_method,
         components=components,
         warnings=warnings,
     )
+
+    if cloned_dir:
+        cleanup_repo(cloned_dir)
+
+    return result
 
 
 def build_poetry_dependencies(path: str) -> tuple[list[dict], list[str]]:
