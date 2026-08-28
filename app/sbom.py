@@ -13,7 +13,15 @@ def generate_sbom(scan_result: ScanResult) -> str:
     bom = Bom()
     name_to_cyclone_comp = {}
 
+    seen_keys = set()
+    unique_components = []
     for comp in scan_result.components:
+        key = f"{normalize(comp.name)}@{comp.version}"
+        if key not in seen_keys:
+            seen_keys.add(key)
+            unique_components.append(comp)
+
+    for comp in unique_components:
         cyclone_comp = CycloneComponent(
             name=comp.name,
             version=comp.version or "",
@@ -26,7 +34,8 @@ def generate_sbom(scan_result: ScanResult) -> str:
             cyclone_comp.licenses.add(LicenseExpression(license_id))
 
         bom.components.add(cyclone_comp)
-        name_to_cyclone_comp[normalize(comp.name)] = cyclone_comp
+        key = f"{normalize(comp.name)}@{comp.version}"
+        name_to_cyclone_comp[key] = cyclone_comp
 
         for vuln in comp.vulnerabilities:
             cyclone_vuln = Vulnerability(
@@ -42,10 +51,17 @@ def generate_sbom(scan_result: ScanResult) -> str:
 
             bom.vulnerabilities.add(cyclone_vuln)
 
-    for comp in scan_result.components:
+    for comp in unique_components:
         if comp.introduced_by:
-            parent = name_to_cyclone_comp.get(normalize(comp.introduced_by))
-            child = name_to_cyclone_comp.get(normalize(comp.name))
+            child_key = f"{normalize(comp.name)}@{comp.version}"
+            child = name_to_cyclone_comp.get(child_key)
+
+            parent = None
+            for key, value in name_to_cyclone_comp.items():
+                if key.startswith(f"{normalize(comp.introduced_by)}@"):
+                    parent = value
+                    break
+
             if parent and child:
                 bom.register_dependency(parent, [child])
 

@@ -1,5 +1,5 @@
 from pathlib import Path
-from detector import detect_ecosystem, detect_python_resolution_method
+from detector import detect_ecosystem, detect_python_resolution_method, detect_node_resolution_method
 from parsers.requirements_txt import parse_requirements_txt
 from parsers.poetry_lock import parse_poetry_lock
 from parsers.pyproject_toml import get_direct_dependency_names
@@ -10,6 +10,7 @@ from license_lookup import get_license
 from vuln_lookup import get_vulnerabilities
 from project import ScanResult
 from github_ingest import is_github_url, clone_repo, cleanup_repo, extract_repo_name
+from parsers.package_lock import parse_package_lock
 
 
 def run_scan(path: str, show_progress: bool = True) -> ScanResult | None:
@@ -25,21 +26,32 @@ def run_scan(path: str, show_progress: bool = True) -> ScanResult | None:
 
     ecosystem = detect_ecosystem(path)
 
-    if ecosystem != "python":
-        print("Currently only Python projects are supported.")
-        return None
+    if ecosystem == "python":
+        resolution_method = detect_python_resolution_method(path)
 
-    resolution_method = detect_python_resolution_method(path)
+        if resolution_method == "poetry.lock":
+            raw_items, warnings = build_poetry_dependencies(path)
+            analysis_quality = "COMPLETE"
+        elif resolution_method == "requirements.txt":
+            parsed, warnings = parse_requirements_txt(path)
+            raw_items = [{"name": d["name"], "version": d["version"], "type": "direct", "introduced_by": None} for d in parsed]
+            analysis_quality = "DEGRADED"
+        else:
+            print("No supported dependency file found.")
+            return None
 
-    if resolution_method == "poetry.lock":
-        raw_items, warnings = build_poetry_dependencies(path)
-        analysis_quality = "COMPLETE"
-    elif resolution_method == "requirements.txt":
-        parsed, warnings = parse_requirements_txt(path)
-        raw_items = [{"name": d["name"], "version": d["version"], "type": "direct", "introduced_by": None} for d in parsed]
-        analysis_quality = "DEGRADED"
+    elif ecosystem == "node":
+        resolution_method = detect_node_resolution_method(path)
+
+        if resolution_method == "package-lock.json":
+            raw_items, warnings = build_node_dependencies(path)
+            analysis_quality = "COMPLETE"
+        else:
+            print("No supported dependency file found (package.json without lockfile not yet supported).")
+            return None
+
     else:
-        print("No supported dependency file found.")
+        print("Unsupported ecosystem.")
         return None
 
     components = enrich_components(raw_items, ecosystem, show_progress)
@@ -63,6 +75,12 @@ def build_poetry_dependencies(path: str) -> tuple[list[dict], list[str]]:
     """Build the full direct/transitive dependency list from poetry.lock + pyproject.toml."""
     packages = parse_poetry_lock(path)
     direct_names = get_direct_dependency_names(path)
+    graph = build_dependency_graph(packages, direct_names)
+    return graph, []
+
+def build_node_dependencies(path: str) -> tuple[list[dict], list[str]]:
+    """Build the full direct/transitive dependency list from package-lock.json."""
+    packages, direct_names = parse_package_lock(path)
     graph = build_dependency_graph(packages, direct_names)
     return graph, []
 

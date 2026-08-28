@@ -25,3 +25,16 @@ def detect_python_resolution_method(project_path: str) -> str:
         return "requirements.txt"
 
     return "unknown"
+
+
+def detect_node_resolution_method(project_path: str) -> str:
+    """Figure out which file to use for resolving Node dependencies."""
+    path = Path(project_path)
+
+    if (path / "package-lock.json").exists():
+        return "package-lock.json"
+
+    if (path / "package.json").exists():
+        return "package.json"
+
+    return "unknown"
