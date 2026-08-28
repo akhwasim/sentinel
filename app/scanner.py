@@ -94,16 +94,29 @@ def enrich_components(raw_items: list[dict], ecosystem: str, show_progress: bool
         if show_progress:
             print(f"Checking {index}/{total}: {item['name']}")
 
+        license_info = resolve_license(item, ecosystem)
+
         component = Component(
             name=item["name"],
             version=item["version"],
             ecosystem=ecosystem,
             type=item["type"],
             purl=build_purl(ecosystem, item["name"], item["version"]),
-            license=get_license(item["name"], item["version"]),
+            license=license_info,
             vulnerabilities=get_vulnerabilities(item["name"], item["version"], ecosystem),
             introduced_by=item.get("introduced_by"),
         )
         components.append(component)
 
     return components
+
+
+def resolve_license(item: dict, ecosystem: str) -> dict:
+    """Get license info the right way depending on ecosystem."""
+    if ecosystem == "node":
+        license_id = item.get("license")
+        if license_id:
+            return {"id": license_id, "source": "package-lock.json", "confidence": "DECLARED"}
+        return {"id": None, "source": None, "confidence": "UNDECLARED"}
+
+    return get_license(item["name"], item["version"])

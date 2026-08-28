@@ -18,6 +18,7 @@ def build_dependency_graph(packages: list[dict], direct_names: set[str]) -> list
             "version": pkg["version"],
             "type": dep_type,
             "introduced_by": introduced_by,
+            "license": pkg.get("license"),
         })
 
     return result
