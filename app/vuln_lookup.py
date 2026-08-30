@@ -1,5 +1,6 @@
 import httpx
 from cvss import CVSS3
+from kev_lookup import is_actively_exploited
 
 
 def get_vulnerabilities(name: str, version: str | None, ecosystem: str) -> list[dict]:
@@ -30,13 +31,28 @@ def get_vulnerabilities(name: str, version: str | None, ecosystem: str) -> list[
 
     results = []
     for v in vulns:
+        cve_id = extract_cve_id(v)
         results.append({
             "id": v.get("id"),
+            "cve_id": cve_id,
             "summary": v.get("summary"),
             "severity": extract_severity(v),
+            "is_kev": is_actively_exploited(cve_id),
         })
 
     return results
+
+
+def extract_cve_id(vuln: dict) -> str | None:
+    """OSV entries sometimes use a GHSA ID as the main id, with the CVE listed as an alias."""
+    if vuln.get("id", "").startswith("CVE-"):
+        return vuln["id"]
+
+    for alias in vuln.get("aliases", []):
+        if alias.startswith("CVE-"):
+            return alias
+
+    return None
 
 
 def extract_severity(vuln: dict) -> str:
