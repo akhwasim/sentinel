@@ -28,12 +28,20 @@ def build_findings_text(scan_result: ScanResult) -> str:
     summary = calculate_score(scan_result)
 
     vuln_lines = []
+    kev_lines = []
     for comp in scan_result.components:
         for vuln in comp.vulnerabilities:
-            vuln_lines.append(
+            line = (
                 f"- {comp.name} {comp.version}: {vuln.get('id')} "
                 f"(severity: {vuln.get('severity')}) - {vuln.get('summary')}"
             )
+            vuln_lines.append(line)
+
+            if vuln.get("is_kev"):
+                kev_lines.append(
+                    f"- {comp.name} {comp.version}: {vuln.get('cve_id')} "
+                    f"is CONFIRMED to be actively exploited in the wild (CISA KEV catalog)"
+                )
 
     direct_deps = [c.name for c in scan_result.components if c.type == "direct"]
 
@@ -54,6 +62,9 @@ Transitive dependencies and what introduced them:
 
 Vulnerabilities found:
 {chr(10).join(vuln_lines) if vuln_lines else "None"}
+
+ACTIVELY EXPLOITED VULNERABILITIES (CISA KEV catalog - highest priority):
+{chr(10).join(kev_lines) if kev_lines else "None"}
 
 Warnings:
 {chr(10).join(scan_result.warnings) if scan_result.warnings else "None"}
