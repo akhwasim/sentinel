@@ -38,6 +38,7 @@ def get_vulnerabilities(name: str, version: str | None, ecosystem: str) -> list[
             "summary": v.get("summary"),
             "severity": extract_severity(v),
             "is_kev": is_actively_exploited(cve_id),
+            "has_public_exploit": has_public_exploit(v),
         })
 
     return results
@@ -83,3 +84,21 @@ def score_to_label(score: float) -> str:
     if score > 0.0:
         return "LOW"
     return "UNKNOWN"
+
+
+EXPLOIT_DOMAINS = [
+    "exploit-db.com",
+    "packetstormsecurity.com",
+    "rapidsec.com",
+    "seebug.org",
+]
+
+
+def has_public_exploit(vuln: dict) -> bool:
+    """Check if any of this vulnerability's references point to a known public exploit site."""
+    references = vuln.get("references", [])
+    for ref in references:
+        url = ref.get("url", "")
+        if any(domain in url for domain in EXPLOIT_DOMAINS):
+            return True
+    return False
