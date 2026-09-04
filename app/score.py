@@ -11,6 +11,7 @@ WARNING_PENALTY = 5
 UNDECLARED_LICENSE_PENALTY = 2
 MAX_LICENSE_PENALTY = 20
 KEV_PENALTY = 25
+EXPLOIT_PENALTY = 10
 
 
 def calculate_score(scan_result: ScanResult) -> dict:
@@ -23,6 +24,7 @@ def calculate_score(scan_result: ScanResult) -> dict:
     undeclared_license_count = 0
 
     kev_count = 0
+    exploit_count = 0
 
     for comp in scan_result.components:
         for vuln in comp.vulnerabilities:
@@ -42,6 +44,9 @@ def calculate_score(scan_result: ScanResult) -> dict:
             if vuln.get("is_kev"):
                 kev_count += 1
                 score -= KEV_PENALTY
+            elif vuln.get("has_public_exploit"):
+                exploit_count += 1
+                score -= EXPLOIT_PENALTY
 
         if comp.license and comp.license.get("confidence") == "UNDECLARED":
             undeclared_license_count += 1
@@ -60,6 +65,7 @@ def calculate_score(scan_result: ScanResult) -> dict:
         "medium_vulnerabilities": medium_count,
         "low_vulnerabilities": low_count,
         "kev_vulnerabilities": kev_count,
+        "exploitable_vulnerabilities": exploit_count,
         "undeclared_licenses": undeclared_license_count,
         "warnings": len(scan_result.warnings),
     }

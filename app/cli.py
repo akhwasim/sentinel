@@ -35,7 +35,10 @@ def scan(path: str = typer.Argument(".")):
     print(f"  Low vulnerabilities: {summary['low_vulnerabilities']}")
     print(f"  Undeclared licenses: {summary['undeclared_licenses']}")
     if summary['kev_vulnerabilities'] > 0:
-        print(f"  🔴 Actively exploited (CISA KEV): {summary['kev_vulnerabilities']}")    
+        print(f"  🔴 Actively exploited (CISA KEV): {summary['kev_vulnerabilities']}")
+
+    if summary['exploitable_vulnerabilities'] > 0:
+        print(f"  🟠 Public exploit available: {summary['exploitable_vulnerabilities']}")    
 
     sbom_json = generate_sbom(scan_result)
     output_path = Path("output") / "sbom.cdx.json"
