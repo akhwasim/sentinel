@@ -27,6 +27,15 @@ def scan(path: str = typer.Argument(".")):
         for warning in scan_result.warnings:
             print(f"  ⚠ {warning}")
 
+    unreachable_with_vulns = [
+        c for c in scan_result.components
+        if c.reachable == "NOT_REACHABLE" and c.vulnerabilities
+    ]
+    if unreachable_with_vulns:
+        print(f"\nNote: {len(unreachable_with_vulns)} vulnerable package(s) are declared but not imported anywhere in your code:")
+        for comp in unreachable_with_vulns:
+            print(f"  - {comp.name} {comp.version}")
+
     summary = calculate_score(scan_result)
     print(f"\nSupply Chain Score: {summary['score']}/100")
     print(f"  Critical vulnerabilities: {summary['critical_vulnerabilities']}")
