@@ -29,6 +29,7 @@ def build_findings_text(scan_result: ScanResult) -> str:
 
     vuln_lines = []
     kev_lines = []
+    exploit_lines = []
     for comp in scan_result.components:
         for vuln in comp.vulnerabilities:
             line = (
@@ -41,6 +42,11 @@ def build_findings_text(scan_result: ScanResult) -> str:
                 kev_lines.append(
                     f"- {comp.name} {comp.version}: {vuln.get('cve_id')} "
                     f"is CONFIRMED to be actively exploited in the wild (CISA KEV catalog)"
+                )
+            elif vuln.get("has_public_exploit"):
+                exploit_lines.append(
+                    f"- {comp.name} {comp.version}: {vuln.get('cve_id')} "
+                    f"has a publicly available exploit (not yet confirmed as actively exploited)"
                 )
 
     direct_deps = [c.name for c in scan_result.components if c.type == "direct"]
@@ -65,6 +71,9 @@ Vulnerabilities found:
 
 ACTIVELY EXPLOITED VULNERABILITIES (CISA KEV catalog - highest priority):
 {chr(10).join(kev_lines) if kev_lines else "None"}
+
+VULNERABILITIES WITH PUBLIC EXPLOITS AVAILABLE (elevated risk, second priority):
+{chr(10).join(exploit_lines) if exploit_lines else "None"}
 
 Warnings:
 {chr(10).join(scan_result.warnings) if scan_result.warnings else "None"}
