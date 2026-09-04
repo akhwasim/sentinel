@@ -32,9 +32,15 @@ def build_findings_text(scan_result: ScanResult) -> str:
     exploit_lines = []
     for comp in scan_result.components:
         for vuln in comp.vulnerabilities:
+            reachability_note = ""
+            if comp.reachable == "NOT_REACHABLE":
+                reachability_note = " [NOTE: this package is declared but never imported in the codebase - likely NOT actually exploitable in practice]"
+            elif comp.reachable == "REACHABLE":
+                reachability_note = " [this package is actively imported and used in the codebase]"
+
             line = (
                 f"- {comp.name} {comp.version}: {vuln.get('id')} "
-                f"(severity: {vuln.get('severity')}) - {vuln.get('summary')}"
+                f"(severity: {vuln.get('severity')}) - {vuln.get('summary')}{reachability_note}"
             )
             vuln_lines.append(line)
 
