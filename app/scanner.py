@@ -11,6 +11,7 @@ from vuln_lookup import get_vulnerabilities
 from project import ScanResult
 from github_ingest import is_github_url, clone_repo, cleanup_repo, extract_repo_name
 from parsers.package_lock import parse_package_lock
+from reachability import find_imported_packages
 
 
 def run_scan(path: str, show_progress: bool = True) -> ScanResult | None:
@@ -55,6 +56,17 @@ def run_scan(path: str, show_progress: bool = True) -> ScanResult | None:
         return None
 
     components = enrich_components(raw_items, ecosystem, show_progress)
+
+    if ecosystem == "python":
+        imported_packages = find_imported_packages(path)
+        for comp in components:
+            if comp.name.lower().replace("_", "-") in imported_packages:
+                comp.reachable = "REACHABLE"
+            else:
+                comp.reachable = "NOT_REACHABLE"
+    else:
+        for comp in components:
+            comp.reachable = "UNKNOWN"
 
     result = ScanResult(
         project_name=project_name_override or Path(path).name,

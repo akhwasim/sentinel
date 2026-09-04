@@ -10,4 +10,5 @@ class Component:
     purl: str
     license: dict | None = None
     introduced_by: str | None = None
+    reachable: str | None = None
     vulnerabilities: list[dict] = field(default_factory=list)
